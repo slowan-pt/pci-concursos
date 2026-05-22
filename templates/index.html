@@ -2,6 +2,7 @@
 
 {% block content %}
 <div class="filters-section">
+    <!-- Linha 1: filtros principais -->
     <div class="filters-grid">
         <div class="filter-group">
             <label for="filter-status">Status:</label>
@@ -40,6 +41,39 @@
             <label>
                 <input type="checkbox" id="hide-removed" onchange="aplicarFiltros()">
                 Ocultar "Tire da minha lista"
+            </label>
+        </div>
+    </div>
+
+    <!-- Linha 2: filtros avançados -->
+    <div class="filters-grid filters-grid-2">
+        <div class="filter-group">
+            <label>Salário mínimo (R$):</label>
+            <input type="number" id="filter-sal-min" class="filter-input" placeholder="Ex: 3000" min="0" step="100" oninput="aplicarFiltros()">
+        </div>
+
+        <div class="filter-group">
+            <label>Salário máximo (R$):</label>
+            <input type="number" id="filter-sal-max" class="filter-input" placeholder="Ex: 15000" min="0" step="100" oninput="aplicarFiltros()">
+        </div>
+
+        <div class="filter-group">
+            <label for="filter-cargo-select">Cargo (lista):</label>
+            <select id="filter-cargo-select" class="filter-select" onchange="aplicarFiltros()">
+                <option value="">Todos os cargos</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="filter-cargo-text">Cargo (digitar):</label>
+            <input type="text" id="filter-cargo-text" class="filter-input"
+                   placeholder="Ex: Médico, Engenheiro..." onkeyup="aplicarFiltros()">
+        </div>
+
+        <div class="filter-group checkbox">
+            <label>
+                <input type="checkbox" id="show-expired" onchange="aplicarFiltros()">
+                Mostrar inscrições encerradas
             </label>
         </div>
     </div>
@@ -162,21 +196,21 @@
     let concursoEditando = null;
 
     document.addEventListener('DOMContentLoaded', () => {
-        carregarConcursos();
+        carregarTodos();
         carregarStats();
-        popularSelectUF();
         setInterval(carregarStats, 30000);
     });
 
-    function carregarConcursos() {
-        const filters = getParams();
-        const queryString = new URLSearchParams(filters).toString();
-
-        fetch(`/api/concursos?${queryString}`)
+    // Carrega todos os concursos uma vez; toda filtragem é client-side
+    function carregarTodos() {
+        document.getElementById('concursos-container').innerHTML = '<div class="loading">Carregando concursos...</div>';
+        fetch('/api/concursos')
             .then(r => r.json())
             .then(data => {
                 todosOsConcursos = data;
-                renderizarConcursos(data);
+                popularSelectUF(data);
+                popularCargosDropdown(data);
+                aplicarFiltros();
                 atualizarDataAtualizacao();
             })
             .catch(e => {
@@ -185,14 +219,100 @@
             });
     }
 
-    function getParams() {
-        return {
-            status: document.getElementById('filter-status').value,
-            region: document.getElementById('filter-region').value,
-            uf: document.getElementById('filter-uf').value,
-            search: document.getElementById('filter-search').value,
-            hide_removed: document.getElementById('hide-removed').checked
-        };
+    function aplicarFiltros() {
+        const filtrados = filtrarCliente(todosOsConcursos);
+        renderizarConcursos(filtrados);
+    }
+
+    function filtrarCliente(lista) {
+        const status     = document.getElementById('filter-status').value;
+        const region     = document.getElementById('filter-region').value;
+        const uf         = document.getElementById('filter-uf').value;
+        const search     = document.getElementById('filter-search').value.toLowerCase().trim();
+        const hideRem    = document.getElementById('hide-removed').checked;
+        const salMin     = parseFloat(document.getElementById('filter-sal-min').value) || 0;
+        const salMax     = parseFloat(document.getElementById('filter-sal-max').value) || Infinity;
+        const cargoSel   = document.getElementById('filter-cargo-select').value.toLowerCase().trim();
+        const cargoText  = document.getElementById('filter-cargo-text').value.toLowerCase().trim();
+        const showExp    = document.getElementById('show-expired').checked;
+
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        return lista.filter(c => {
+            if (status && c.status !== status) return false;
+            if (region && c.regiao !== region) return false;
+            if (uf && c.uf !== uf) return false;
+            if (hideRem && c.status === 'Tire da minha lista') return false;
+            if (search) {
+                const hay = `${c.titulo} ${c.orgao} ${c.uf} ${c.cargos}`.toLowerCase();
+                if (!hay.includes(search)) return false;
+            }
+            // Filtro de salário
+            if (salMin > 0 || salMax < Infinity) {
+                const sal = extrairSalario(c.vagas);
+                if (sal === null && salMin > 0) return false;
+                if (sal !== null && (sal < salMin || sal > salMax)) return false;
+            }
+            // Filtro de cargo (dropdown tem precedência; texto sobrescreve)
+            const cargoBusca = cargoText || cargoSel;
+            if (cargoBusca) {
+                const campo = `${c.cargos} ${c.titulo}`.toLowerCase();
+                if (!campo.includes(cargoBusca)) return false;
+            }
+            // Encerrados: oculta automaticamente se prazo já passou
+            if (!showExp) {
+                const dt = parsePrazo(c.prazo);
+                if (dt && dt < hoje) return false;
+            }
+            return true;
+        });
+    }
+
+    function extrairSalario(vagas) {
+        if (!vagas) return null;
+        const matches = [...vagas.matchAll(/R\$\s*([\d.]+,\d{2})/g)];
+        if (!matches.length) return null;
+        // usa o maior valor da faixa (salário teto)
+        return Math.max(...matches.map(m => parseFloat(m[1].replace(/\./g, '').replace(',', '.'))));
+    }
+
+    function parsePrazo(prazo) {
+        if (!prazo) return null;
+        const m = prazo.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (!m) return null;
+        return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+    }
+
+    function popularSelectUF(data) {
+        const ufs = [...new Set(data.map(c => c.uf).filter(Boolean))].sort();
+        const select = document.getElementById('filter-uf');
+        while (select.options.length > 1) select.remove(1);
+        ufs.forEach(uf => {
+            const o = document.createElement('option');
+            o.value = uf; o.textContent = uf;
+            select.appendChild(o);
+        });
+    }
+
+    function popularCargosDropdown(data) {
+        const set = new Set();
+        data.forEach(c => {
+            if (!c.cargos) return;
+            c.cargos.split(/[\/,]/).forEach(p => {
+                const t = p.trim();
+                if (t && t.length > 2 && !['vários cargos','varios cargos','-','não informado'].includes(t.toLowerCase()))
+                    set.add(t);
+            });
+        });
+        const cargos = [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        const select = document.getElementById('filter-cargo-select');
+        while (select.options.length > 1) select.remove(1);
+        cargos.forEach(c => {
+            const o = document.createElement('option');
+            o.value = c.toLowerCase(); o.textContent = c;
+            select.appendChild(o);
+        });
     }
 
     function renderizarConcursos(concursos) {
@@ -329,7 +449,7 @@
             .then(r => r.json())
             .then(data => {
                 mostrarToast(`✅ Atualização concluída! ${data.novos} novos, ${data.atualizados} atualizados`, 'success');
-                carregarConcursos();
+                carregarTodos();
                 carregarStats();
             })
             .catch(e => {
@@ -351,25 +471,6 @@
                 document.getElementById('stat-review').textContent = data.por_status['Vou ver de novo'] || 0;
                 document.getElementById('stat-removed').textContent = data.por_status['Tire da minha lista'] || 0;
                 document.getElementById('total-concursos').textContent = data.total;
-            });
-    }
-
-    function aplicarFiltros() {
-        carregarConcursos();
-    }
-
-    function popularSelectUF() {
-        fetch('/api/ufs')
-            .then(r => r.json())
-            .then(ufs => {
-                const select = document.getElementById('filter-uf');
-                // remove opções antigas (exceto a primeira "Todos")
-                while (select.options.length > 1) select.remove(1);
-                ufs.forEach(uf => {
-                    const o = document.createElement('option');
-                    o.value = uf; o.textContent = uf;
-                    select.appendChild(o);
-                });
             });
     }
 
