@@ -1,60 +1,17 @@
-# Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
-.Python
 env/
 venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Flask
-instance/
-.webassets-cache
-
-# Banco de dados local
 *.db
-*.sqlite
 *.sqlite3
-
-# Variáveis de ambiente
 .env
 .env.local
-.env.*.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Logs
 *.log
-logs/
-
-# Temp
-tmp/
-temp/
-.cache/
-
-# Render
-.git/
+.DS_Store
+.vscode/
+inspect_pci*.py
+test_scraper.py
+railway_setup.py
+*.txt.bak
+instance/

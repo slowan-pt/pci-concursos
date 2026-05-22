@@ -24,6 +24,24 @@ class Concurso(db.Model):
     def __repr__(self):
         return f'<Concurso {self.titulo}>'
 
+    def to_dict(self):
+        return {
+            'id':              self.id,
+            'titulo':          self.titulo,
+            'orgao':           self.orgao,
+            'uf':              self.uf,
+            'regiao':          self.regiao,
+            'link':            self.link,
+            'cargos':          self.cargos,
+            'escolaridade':    self.escolaridade,
+            'vagas':           self.vagas,
+            'prazo':           self.prazo,
+            'status':          self.status,
+            'notas':           self.notas,
+            'data_encontrado': self.data_encontrado.isoformat() if self.data_encontrado else None,
+            'data_atualizacao':self.data_atualizacao.isoformat() if self.data_atualizacao else None,
+        }
+
     @staticmethod
     def encontrar_por_link(link):
         if not link:

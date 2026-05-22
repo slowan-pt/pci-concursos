@@ -353,17 +353,18 @@
     }
 
     function popularSelectUF() {
-        const select = document.getElementById('filter-uf');
-        const ufs = new Set();
-        todosOsConcursos.forEach(c => {
-            if (c.uf) ufs.add(c.uf);
-        });
-        Array.from(ufs).sort().forEach(uf => {
-            const option = document.createElement('option');
-            option.value = uf;
-            option.textContent = uf;
-            select.appendChild(option);
-        });
+        fetch('/api/ufs')
+            .then(r => r.json())
+            .then(ufs => {
+                const select = document.getElementById('filter-uf');
+                // remove opções antigas (exceto a primeira "Todos")
+                while (select.options.length > 1) select.remove(1);
+                ufs.forEach(uf => {
+                    const o = document.createElement('option');
+                    o.value = uf; o.textContent = uf;
+                    select.appendChild(o);
+                });
+            });
     }
 
     function formatarData(dataStr) {
