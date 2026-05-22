@@ -83,7 +83,7 @@
 
         <div class="concurso-body">
             <div class="info-row">
-                <strong>Cargos:</strong>
+                <strong>Vagas/Cargos:</strong>
                 <span class="cargos">-</span>
             </div>
             <div class="info-row">
@@ -102,6 +102,21 @@
                 <strong>Encontrado em:</strong>
                 <span class="data-encontrado">-</span>
             </div>
+        </div>
+
+        <div class="detail-section" style="display:none;">
+            <div class="cargos-lista-section">
+                <strong>Cargos detalhados:</strong>
+                <ul class="cargos-lista"></ul>
+            </div>
+            <div class="editais-section" style="display:none;">
+                <strong>Editais:</strong>
+                <div class="editais-links"></div>
+            </div>
+        </div>
+
+        <div class="detail-toggle">
+            <button class="btn-detail" onclick="carregarDetalhe(this)">📋 Ver cargos e editais</button>
         </div>
 
         <div class="concurso-notes">
@@ -380,6 +395,73 @@
         const agora = new Date();
         const texto = `Última atualização: ${agora.toLocaleTimeString('pt-BR')}`;
         document.getElementById('last-update').textContent = texto;
+    }
+
+    function carregarDetalhe(btn) {
+        const card = btn.closest('.concurso-card');
+        const concursoId = card.dataset.id;
+        const detailSection = card.querySelector('.detail-section');
+        const toggleDiv = card.querySelector('.detail-toggle');
+
+        if (detailSection.style.display !== 'none') {
+            detailSection.style.display = 'none';
+            btn.textContent = '📋 Ver cargos e editais';
+            return;
+        }
+
+        if (card.dataset.detailLoaded === '1') {
+            detailSection.style.display = 'block';
+            btn.textContent = '🔼 Ocultar detalhes';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Carregando...';
+
+        fetch(`/api/concursos/${concursoId}/detail`)
+            .then(r => r.json())
+            .then(data => {
+                const lista = card.querySelector('.cargos-lista');
+                const editaisDiv = card.querySelector('.editais-links');
+                const editaisSection = card.querySelector('.editais-section');
+
+                lista.innerHTML = '';
+                if (data.cargos_lista && data.cargos_lista.length > 0) {
+                    data.cargos_lista.forEach(c => {
+                        const li = document.createElement('li');
+                        li.textContent = c;
+                        lista.appendChild(li);
+                    });
+                    card.querySelector('.cargos-lista-section').style.display = 'block';
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'Nenhum cargo listado na página.';
+                    li.style.color = '#888';
+                    lista.appendChild(li);
+                }
+
+                editaisDiv.innerHTML = '';
+                if (data.editais && data.editais.length > 0) {
+                    data.editais.forEach(e => {
+                        const a = document.createElement('a');
+                        a.href = e.url;
+                        a.target = '_blank';
+                        a.className = 'btn-edital';
+                        a.textContent = '📄 ' + e.nome;
+                        editaisDiv.appendChild(a);
+                    });
+                    editaisSection.style.display = 'block';
+                }
+
+                detailSection.style.display = 'block';
+                card.dataset.detailLoaded = '1';
+                btn.textContent = '🔼 Ocultar detalhes';
+                btn.disabled = false;
+            })
+            .catch(() => {
+                btn.textContent = '⚠️ Erro ao carregar';
+                btn.disabled = false;
+            });
     }
 
     function mostrarToast(mensagem, tipo = 'info') {

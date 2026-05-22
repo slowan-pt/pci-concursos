@@ -1,11 +1,18 @@
 import os
+import requests as _requests
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
+from bs4 import BeautifulSoup
 from config import config
 from models import db, Concurso
 from scraper import scrape_pci_concursos
+
+_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36',
+    'Accept-Language': 'pt-BR,pt;q=0.9',
+}
 
 app = Flask(__name__)
 app.config.from_object(config[os.getenv('FLASK_ENV', 'development')])
@@ -115,6 +122,40 @@ def get_stats():
 def get_ufs():
     rows = db.session.query(Concurso.uf).distinct().order_by(Concurso.uf).all()
     return jsonify([r[0] for r in rows if r[0]])
+
+@app.route('/api/concursos/<int:cid>/detail')
+def get_detail(cid):
+    c = db.session.get(Concurso, cid)
+    if not c or not c.link:
+        return jsonify({'cargos_lista': [], 'editais': []})
+    try:
+        resp = _requests.get(c.link, headers=_HEADERS, timeout=10)
+        resp.encoding = 'utf-8'
+        soup = BeautifulSoup(resp.content, 'html.parser')
+        body = soup.find('div', attrs={'itemprop': 'articleBody'})
+
+        # Extract cargo list from <ul><li> elements
+        cargos_lista = []
+        if body:
+            for ul in body.find_all('ul'):
+                items = [li.get_text(strip=True) for li in ul.find_all('li') if li.get_text(strip=True)]
+                if items:
+                    cargos_lista.extend(items)
+                    break  # use first <ul> (usually the cargo list)
+
+        # Extract all PDF links from the full page
+        editais = []
+        seen = set()
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if '.pdf' in href.lower() and href not in seen:
+                seen.add(href)
+                nome = a.get_text(strip=True) or 'Edital'
+                editais.append({'nome': nome, 'url': href})
+
+        return jsonify({'cargos_lista': cargos_lista, 'editais': editais})
+    except Exception as e:
+        return jsonify({'cargos_lista': [], 'editais': [], 'error': str(e)})
 
 if __name__ == '__main__':
     app.run(debug=True)
