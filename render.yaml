@@ -1,19 +1,14 @@
 services:
   - type: web
-    name: controle-pci-concursos
-    runtime: python311
+    name: pci-concursos
+    runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    plan: free
     envVars:
       - key: FLASK_ENV
         value: production
       - key: DATABASE_URL
-        fromDatabase:
-          name: pci-concursos-db
-          property: connectionString
-
-databases:
-  - name: pci-concursos-db
-    databaseName: pci_concursos
-    user: pci_user
-    region: ohio
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
