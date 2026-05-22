@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle PCI Concursos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="navbar-container">
+            <h1 class="navbar-title">📋 Controle PCI Concursos</h1>
+            <div class="navbar-info">
+                <span id="last-update" class="last-update">Carregando...</span>
+                <button id="btn-scrape" class="btn-primary" onclick="scrapeNow()">🔄 Atualizar do PCI</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>Controle PCI Concursos • <span id="total-concursos">0</span> concursos cadastrados</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
