@@ -70,6 +70,8 @@
 
 <template id="concurso-template">
     <div class="concurso-card" data-id="">
+
+        <!-- Linha de topo: título + badges -->
         <div class="concurso-header">
             <div class="concurso-title">
                 <h3></h3>
@@ -81,44 +83,39 @@
             </div>
         </div>
 
-        <div class="concurso-body">
-            <div class="info-row">
-                <strong>Vagas/Cargos:</strong>
-                <span class="cargos">-</span>
+        <!-- Grid de 3 colunas -->
+        <div class="card-grid">
+
+            <!-- Coluna 1: info resumida -->
+            <div class="col-info">
+                <div class="info-row"><span class="info-label">Cargos:</span><span class="cargos">-</span></div>
+                <div class="info-row"><span class="info-label">Escolaridade:</span><span class="escolaridade">-</span></div>
+                <div class="info-row"><span class="info-label">Vagas:</span><span class="vagas">-</span></div>
+                <div class="info-row"><span class="info-label">Prazo:</span><span class="prazo">-</span></div>
+                <div class="info-row"><span class="info-label">Encontrado:</span><span class="data-encontrado">-</span></div>
             </div>
-            <div class="info-row">
-                <strong>Escolaridade:</strong>
-                <span class="escolaridade">-</span>
+
+            <!-- Coluna 2: cargos detalhados -->
+            <div class="col-cargos">
+                <div class="col-panel-header">Cargos</div>
+                <div class="cargos-state loading">
+                    <span class="spinner"></span> carregando...
+                </div>
+                <ul class="cargos-lista" style="display:none;"></ul>
             </div>
-            <div class="info-row">
-                <strong>Vagas:</strong>
-                <span class="vagas">-</span>
+
+            <!-- Coluna 3: editais PDF -->
+            <div class="col-editais">
+                <div class="col-panel-header">PDF / Editais</div>
+                <div class="editais-state loading">
+                    <span class="spinner"></span> carregando...
+                </div>
+                <div class="editais-links" style="display:none;"></div>
             </div>
-            <div class="info-row">
-                <strong>Prazo:</strong>
-                <span class="prazo">-</span>
-            </div>
-            <div class="info-row">
-                <strong>Encontrado em:</strong>
-                <span class="data-encontrado">-</span>
-            </div>
+
         </div>
 
-        <div class="detail-section" style="display:none;">
-            <div class="cargos-lista-section">
-                <strong>Cargos detalhados:</strong>
-                <ul class="cargos-lista"></ul>
-            </div>
-            <div class="editais-section" style="display:none;">
-                <strong>Editais:</strong>
-                <div class="editais-links"></div>
-            </div>
-        </div>
-
-        <div class="detail-toggle">
-            <button class="btn-detail" onclick="carregarDetalhe(this)">📋 Ver cargos e editais</button>
-        </div>
-
+        <!-- Notas + footer (largura total) -->
         <div class="concurso-notes">
             <div class="notes-content"></div>
             <button class="btn-edit-notes" onclick="editarNotas(this)">✏️ Notas</button>
@@ -126,20 +123,12 @@
 
         <div class="concurso-footer">
             <div class="status-buttons">
-                <button class="status-btn status-1" onclick="mudarStatus(this, 'Ainda não classificados')">
-                    Não classificado
-                </button>
-                <button class="status-btn status-2" onclick="mudarStatus(this, 'Vou ver de novo')">
-                    Vou ver de novo
-                </button>
-                <button class="status-btn status-3" onclick="mudarStatus(this, 'Tire da minha lista')">
-                    Remover
-                </button>
+                <button class="status-btn status-1" onclick="mudarStatus(this, 'Ainda não classificados')">Não classificado</button>
+                <button class="status-btn status-2" onclick="mudarStatus(this, 'Vou ver de novo')">Vou ver de novo</button>
+                <button class="status-btn status-3" onclick="mudarStatus(this, 'Tire da minha lista')">Remover</button>
             </div>
             <div class="concurso-actions">
-                <a class="btn-link" target="_blank" title="Abrir no PCI">
-                    🔗 PCI
-                </a>
+                <a class="btn-link" target="_blank" title="Abrir no PCI">🔗 PCI</a>
             </div>
         </div>
     </div>
@@ -257,6 +246,8 @@
             });
 
             container.appendChild(clone);
+            // Registra o card no observer para auto-carregar detalhes
+            detailObserver.observe(container.lastElementChild);
         });
     }
 
@@ -397,50 +388,50 @@
         document.getElementById('last-update').textContent = texto;
     }
 
-    function carregarDetalhe(btn) {
-        const card = btn.closest('.concurso-card');
+    // IntersectionObserver: carrega detalhe quando card entra na tela
+    const detailObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const card = entry.target;
+                if (card.dataset.detailLoaded !== '1') {
+                    carregarDetalheCard(card);
+                }
+                detailObserver.unobserve(card);
+            }
+        });
+    }, { rootMargin: '200px', threshold: 0 });
+
+    function carregarDetalheCard(card) {
         const concursoId = card.dataset.id;
-        const detailSection = card.querySelector('.detail-section');
-        const toggleDiv = card.querySelector('.detail-toggle');
-
-        if (detailSection.style.display !== 'none') {
-            detailSection.style.display = 'none';
-            btn.textContent = '📋 Ver cargos e editais';
-            return;
-        }
-
-        if (card.dataset.detailLoaded === '1') {
-            detailSection.style.display = 'block';
-            btn.textContent = '🔼 Ocultar detalhes';
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = '⏳ Carregando...';
+        if (!concursoId || card.dataset.detailLoaded === '1') return;
+        card.dataset.detailLoaded = '1';
 
         fetch(`/api/concursos/${concursoId}/detail`)
             .then(r => r.json())
             .then(data => {
-                const lista = card.querySelector('.cargos-lista');
-                const editaisDiv = card.querySelector('.editais-links');
-                const editaisSection = card.querySelector('.editais-section');
-
-                lista.innerHTML = '';
+                // Cargos
+                const cargosState = card.querySelector('.cargos-state');
+                const cargosLista = card.querySelector('.cargos-lista');
+                cargosState.style.display = 'none';
+                cargosLista.style.display = '';
                 if (data.cargos_lista && data.cargos_lista.length > 0) {
                     data.cargos_lista.forEach(c => {
                         const li = document.createElement('li');
                         li.textContent = c;
-                        lista.appendChild(li);
+                        cargosLista.appendChild(li);
                     });
-                    card.querySelector('.cargos-lista-section').style.display = 'block';
                 } else {
                     const li = document.createElement('li');
-                    li.textContent = 'Nenhum cargo listado na página.';
-                    li.style.color = '#888';
-                    lista.appendChild(li);
+                    li.textContent = 'Não listado';
+                    li.className = 'sem-dados';
+                    cargosLista.appendChild(li);
                 }
 
-                editaisDiv.innerHTML = '';
+                // Editais
+                const editaisState = card.querySelector('.editais-state');
+                const editaisLinks = card.querySelector('.editais-links');
+                editaisState.style.display = 'none';
+                editaisLinks.style.display = '';
                 if (data.editais && data.editais.length > 0) {
                     data.editais.forEach(e => {
                         const a = document.createElement('a');
@@ -448,19 +439,17 @@
                         a.target = '_blank';
                         a.className = 'btn-edital';
                         a.textContent = '📄 ' + e.nome;
-                        editaisDiv.appendChild(a);
+                        editaisLinks.appendChild(a);
                     });
-                    editaisSection.style.display = 'block';
+                } else {
+                    editaisLinks.innerHTML = '<span class="sem-dados">Nenhum PDF encontrado</span>';
                 }
-
-                detailSection.style.display = 'block';
-                card.dataset.detailLoaded = '1';
-                btn.textContent = '🔼 Ocultar detalhes';
-                btn.disabled = false;
             })
             .catch(() => {
-                btn.textContent = '⚠️ Erro ao carregar';
-                btn.disabled = false;
+                const s1 = card.querySelector('.cargos-state');
+                const s2 = card.querySelector('.editais-state');
+                if (s1) s1.innerHTML = '<span class="sem-dados">Erro ao carregar</span>';
+                if (s2) s2.innerHTML = '';
             });
     }
 

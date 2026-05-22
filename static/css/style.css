@@ -247,10 +247,21 @@ body {
 
 .info-row {
     display: grid;
-    grid-template-columns: 140px 1fr;
-    gap: 1rem;
-    padding: 0.5rem 0;
-    font-size: 0.95rem;
+    grid-template-columns: 90px 1fr;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    color: var(--secondary);
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .info-row strong {
@@ -604,82 +615,119 @@ body {
     }
 }
 
-/* --- Detalhe: cargos e editais --- */
-.detail-toggle {
-    padding: 0.25rem 1rem 0.5rem;
-}
-
-.btn-detail {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.3rem 0.75rem;
-    font-size: 0.8rem;
-    color: var(--primary);
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.btn-detail:hover {
-    background: var(--light);
-}
-
-.detail-section {
-    padding: 0.75rem 1rem;
-    background: #f8fafc;
+/* --- Grid 3 colunas dentro do card --- */
+.card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     border-top: 1px solid var(--border);
+}
+
+.col-info {
+    padding: 0.75rem 1rem;
+}
+
+.col-cargos,
+.col-editais {
+    padding: 0.75rem 1rem;
+    border-left: 1px solid var(--border);
+    background: #f8fafc;
+}
+
+.col-panel-header {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--secondary);
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.4rem;
     border-bottom: 1px solid var(--border);
 }
 
-.cargos-lista-section strong,
-.editais-section strong {
-    display: block;
+/* Spinner de loading */
+.cargos-state,
+.editais-state {
     font-size: 0.8rem;
     color: var(--secondary);
-    margin-bottom: 0.4rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+/* Lista de cargos detalhados */
 .cargos-lista {
     list-style: none;
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    margin-bottom: 0.75rem;
+    flex-direction: column;
+    gap: 0.3rem;
 }
 
 .cargos-lista li {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 0.2rem 0.65rem;
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     color: var(--dark);
+    padding: 0.2rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    line-height: 1.3;
 }
 
-.editais-section {
-    margin-top: 0.5rem;
+.cargos-lista li:last-child {
+    border-bottom: none;
 }
 
+.sem-dados {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Botões de edital PDF */
 .editais-links {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 0.4rem;
 }
 
 .btn-edital {
-    display: inline-block;
+    display: block;
     background: #fff7ed;
     border: 1px solid #fed7aa;
     border-radius: 6px;
-    padding: 0.3rem 0.65rem;
-    font-size: 0.8rem;
+    padding: 0.4rem 0.65rem;
+    font-size: 0.78rem;
     color: #c2410c;
     text-decoration: none;
+    line-height: 1.3;
     transition: background 0.15s;
+    word-break: break-word;
 }
 
 .btn-edital:hover {
     background: #ffedd5;
+}
+
+/* Responsivo: colapsa para 1 coluna no mobile */
+@media (max-width: 768px) {
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+    .col-cargos,
+    .col-editais {
+        border-left: none;
+        border-top: 1px solid var(--border);
+    }
 }
